@@ -1,4 +1,4 @@
-import { extractCachedTokens, extractInputTokens, extractOutputTokens } from '../../cache';
+import { extractCachedTokens, extractOutputTokens, extractUncachedInputTokens } from '../../cache';
 
 export function streamOpenAIToAnthropic(openaiStream: ReadableStream, model: string): ReadableStream {
   const messageId = "msg_" + Date.now();
@@ -27,7 +27,7 @@ export function streamOpenAIToAnthropic(openaiStream: ReadableStream, model: str
         // Capture usage from any chunk that has it
         if (parsed.usage) {
           lastUsage = {
-            input_tokens: extractInputTokens(parsed.usage),
+            input_tokens: extractUncachedInputTokens(parsed.usage),
             output_tokens: extractOutputTokens(parsed.usage),
             cache_read_input_tokens: extractCachedTokens(parsed.usage),
             cache_creation_input_tokens: 0,

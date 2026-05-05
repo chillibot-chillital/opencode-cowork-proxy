@@ -98,7 +98,7 @@ describe('formatOpenAIToAnthropic (OpenAI → Anthropic response)', () => {
     }, 'claude-sonnet-4-20250514');
     expect(result.usage.cache_read_input_tokens).toBe(400);
     expect(result.usage.cache_creation_input_tokens).toBe(0);
-    expect(result.usage.input_tokens).toBe(1000);
+    expect(result.usage.input_tokens).toBe(600);
     expect(result.usage.output_tokens).toBe(50);
   });
 
@@ -108,7 +108,7 @@ describe('formatOpenAIToAnthropic (OpenAI → Anthropic response)', () => {
       usage: { input_tokens: 1000, output_tokens: 50, cache_read_input_tokens: 400 },
     }, 'deepseek-v4-pro');
     expect(result.usage).toEqual({
-      input_tokens: 1000,
+      input_tokens: 600,
       output_tokens: 50,
       cache_read_input_tokens: 400,
       cache_creation_input_tokens: 0,

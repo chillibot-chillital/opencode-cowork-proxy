@@ -58,6 +58,15 @@ export function extractInputTokens(usage: any): number {
   );
 }
 
+/**
+ * Anthropic reports cache reads separately from normal input tokens.
+ * OpenAI-compatible usage usually includes cached tokens inside prompt/input tokens,
+ * so subtract them when mapping to Anthropic usage to avoid double counting.
+ */
+export function extractUncachedInputTokens(usage: any): number {
+  return Math.max(0, extractInputTokens(usage) - extractCachedTokens(usage));
+}
+
 /** Extract output token count from OpenAI, Anthropic, and OpenAI-compatible providers. */
 export function extractOutputTokens(usage: any): number {
   return tokenCount(

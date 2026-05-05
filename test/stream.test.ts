@@ -68,7 +68,7 @@ describe('streamOpenAIToAnthropic (OpenAI SSE → Anthropic SSE)', () => {
 
     const result = await collectStream(streamOpenAIToAnthropic(openaiSSE, 'test-model'));
 
-    expect(result).toContain('"input_tokens":12');
+    expect(result).toContain('"input_tokens":6');
     expect(result).toContain('"output_tokens":4');
     expect(result).toContain('"cache_read_input_tokens":6');
   });

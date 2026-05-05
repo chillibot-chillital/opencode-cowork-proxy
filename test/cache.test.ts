@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashSystemPrompt, hasCacheControl, extractCachedTokens, extractInputTokens, extractOutputTokens } from '../src/cache';
+import { hashSystemPrompt, hasCacheControl, extractCachedTokens, extractInputTokens, extractOutputTokens, extractUncachedInputTokens } from '../src/cache';
 
 describe('hashSystemPrompt', () => {
   it('produces a stable hash for the same string', () => {
@@ -100,6 +100,11 @@ describe('token usage extraction', () => {
     const usage = { prompt_tokens: 10, completion_tokens: 5 };
     expect(extractInputTokens(usage)).toBe(10);
     expect(extractOutputTokens(usage)).toBe(5);
+  });
+
+  it('subtracts cached tokens from Anthropic input token mapping', () => {
+    const usage = { prompt_tokens: 1000, completion_tokens: 50, prompt_tokens_details: { cached_tokens: 400 } };
+    expect(extractUncachedInputTokens(usage)).toBe(600);
   });
 
   it('extracts Anthropic/OpenCode-compatible usage tokens', () => {

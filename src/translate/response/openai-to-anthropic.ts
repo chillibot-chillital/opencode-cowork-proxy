@@ -1,4 +1,4 @@
-import { extractCachedTokens, extractInputTokens, extractOutputTokens } from '../../cache';
+import { extractCachedTokens, extractOutputTokens, extractUncachedInputTokens } from '../../cache';
 
 function parseToolArguments(value: string | undefined): Record<string, unknown> {
   if (!value) return {};
@@ -53,7 +53,7 @@ export function formatOpenAIToAnthropic(completion: any, model: string): any {
   if (completion.usage) {
     const cached = extractCachedTokens(completion.usage);
     result.usage = {
-      input_tokens: extractInputTokens(completion.usage),
+      input_tokens: extractUncachedInputTokens(completion.usage),
       output_tokens: extractOutputTokens(completion.usage),
       cache_read_input_tokens: cached,
       cache_creation_input_tokens: 0, // OpenAI doesn't expose write tokens
