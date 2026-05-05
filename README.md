@@ -6,6 +6,8 @@ This project lets Claude use OpenCode Go models, and some OpenCode Zen models.
 
 Claude normally speaks the Anthropic API format. OpenCode Go mostly speaks OpenAI-compatible API format. This small Cloudflare Worker sits in the middle and translates between them.
 
+For a full walkthrough of setting this up in Claude (including Claude Desktop, Claude Code CLI, and VS Code extensions), see [How to Use Claude Code for Free with OpenCode](https://vibestacklab.substack.com/p/how-to-use-claude-code-for-free-with).
+
 ## Set Up In Claude
 
 If you want the fastest working setup, use `minimax-m2.5-free` as the first model.
