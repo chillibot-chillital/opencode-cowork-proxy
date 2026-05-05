@@ -1,3 +1,4 @@
+import { Hono } from 'hono';
 import { extractApiKey, validateApiKey, authErrorResponse } from './auth';
 import { formatAnthropicToOpenAI } from './translate/request/anthropic-to-openai';
 import { formatOpenAIToAnthropic } from './translate/request/openai-to-anthropic';
@@ -6,10 +7,34 @@ import { formatAnthropicToOpenAI as toOpenAIResponse } from './translate/respons
 import { streamOpenAIToAnthropic } from './translate/stream/openai-to-anthropic';
 import { streamAnthropicToOpenAI } from './translate/stream/anthropic-to-openai';
 
-const DEFAULT_UPSTREAM = "https://opencode.ai/zen/go/v1";
+const GO_UPSTREAM = "https://opencode.ai/zen/go/v1";
+const ZEN_UPSTREAM = "https://opencode.ai/zen/v1";
+const DEFAULT_UPSTREAM = GO_UPSTREAM;
 
-function getUpstream(request: Request): string {
-  return request.headers.get("X-Upstream-Url") || DEFAULT_UPSTREAM;
+interface RouteConfig {
+  path: string;
+  upstream: string;
+}
+
+function stripPrefix(path: string, prefix: string): string | null {
+  if (path === prefix) return "/";
+  if (path.startsWith(`${prefix}/`)) return path.slice(prefix.length);
+  return null;
+}
+
+function routeConfig(request: Request): RouteConfig {
+  const path = new URL(request.url).pathname;
+  const goPath = stripPrefix(path, "/go");
+  if (goPath) return { path: goPath, upstream: GO_UPSTREAM };
+
+  const zenPath = stripPrefix(path, "/zen");
+  if (zenPath) return { path: zenPath, upstream: ZEN_UPSTREAM };
+
+  return { path, upstream: DEFAULT_UPSTREAM };
+}
+
+function getUpstream(request: Request, routeUpstream: string): string {
+  return request.headers.get("X-Upstream-Url") || routeUpstream;
 }
 
 function upstreamFormat(request: Request): "openai" | "anthropic" {
@@ -28,14 +53,13 @@ function anthropicHeaders(request: Request, key: string): Record<string, string>
   return headers;
 }
 
-export default {
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    const upstream = getUpstream(request);
-    const fmt = upstreamFormat(request);
+async function handleRequest(request: Request): Promise<Response> {
+  const route = routeConfig(request);
+  const upstream = getUpstream(request, route.upstream);
+  const fmt = upstreamFormat(request);
 
-    // Anthropic → OpenAI (for Claude Desktop/Cowork → any OpenAI API)
-    if (url.pathname === '/v1/messages' && request.method === 'POST') {
+  // Anthropic → OpenAI (for Claude Desktop/Cowork → any OpenAI API)
+  if (route.path === '/v1/messages' && request.method === 'POST') {
       const key = extractApiKey(request.headers);
       const err = validateApiKey(key);
       if (err) return authErrorResponse(err);
@@ -71,10 +95,10 @@ export default {
         body: await request.text(),
       });
       return res;
-    }
+  }
 
-    // OpenAI → Anthropic (or pass-through)
-    if (url.pathname === '/v1/chat/completions' && request.method === 'POST') {
+  // OpenAI → Anthropic (or pass-through)
+  if (route.path === '/v1/chat/completions' && request.method === 'POST') {
       const key = extractApiKey(request.headers);
       const err = validateApiKey(key);
       if (err) return authErrorResponse(err);
@@ -107,10 +131,10 @@ export default {
         body: await request.text(),
       });
       return res;
-    }
+  }
 
-    // Model discovery
-    if (url.pathname === '/v1/models' && request.method === 'GET') {
+  // Model discovery
+  if (route.path === '/v1/models' && request.method === 'GET') {
       const key = extractApiKey(request.headers);
       const err = validateApiKey(key);
       if (err) return authErrorResponse(err);
@@ -123,22 +147,30 @@ export default {
         : await fetch(`${upstream}/models`, {
             method: "GET",
             headers: { "Authorization": `Bearer ${key}` },
-          });
+      });
       if (!res.ok) return new Response(await res.text(), { status: res.status });
       return new Response(await res.text(), { headers: { "Content-Type": "application/json" } });
-    }
+  }
 
-    return new Response(JSON.stringify({
-      name: "opencode-cowork-proxy",
-      upstream,
-      endpoints: {
-        "/v1/messages": "Anthropic → upstream (translated if upstream=openai)",
-        "/v1/chat/completions": "OpenAI → upstream (translated if upstream=anthropic)",
-        "/v1/models": "Model discovery proxy",
-      },
-    }, null, 2), {
-      headers: { "Content-Type": "application/json" },
-      status: url.pathname === '/' ? 200 : 404,
-    });
-  },
-};
+  return new Response(JSON.stringify({
+    name: "opencode-cowork-proxy",
+    upstream,
+    routes: {
+      "/go": GO_UPSTREAM,
+      "/zen": ZEN_UPSTREAM,
+    },
+    endpoints: {
+      "/v1/messages": "Anthropic → upstream (translated if upstream=openai)",
+      "/v1/chat/completions": "OpenAI → upstream (translated if upstream=anthropic)",
+      "/v1/models": "Model discovery proxy",
+    },
+  }, null, 2), {
+    headers: { "Content-Type": "application/json" },
+    status: route.path === '/' ? 200 : 404,
+  });
+}
+
+const app = new Hono();
+app.all('*', (c) => handleRequest(c.req.raw));
+
+export default app;

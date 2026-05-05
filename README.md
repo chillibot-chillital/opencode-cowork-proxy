@@ -24,16 +24,26 @@ Use these values in Claude's **Configure third-party Inference** screen:
 | Setting | Value |
 |---------|-------|
 | Provider | Gateway / third-party inference gateway |
-| Base URL | Your deployed Worker URL |
+| Base URL | Your deployed Worker URL, or add `/go` or `/zen` |
 | Auth scheme | `x-api-key` |
 | API key | Your OpenCode Go API key |
 | Models | Add manually, for example `deepseek-v4-pro` |
 
-Important: use the Worker root URL only. Do not add `/v1/messages` yourself. Claude adds the API path automatically.
+Important: use the Worker root URL only, optionally ending in `/go` or `/zen`. Do not add `/v1/messages` yourself. Claude adds the API path automatically.
 
 ## What This Does
 
-The Worker accepts Claude's Anthropic-style requests at `/v1/messages`, converts them to OpenAI-style requests, and sends them to OpenCode Go.
+The Worker accepts Claude's Anthropic-style requests at `/v1/messages`, converts them to OpenAI-style requests, and sends them to OpenCode Go by default.
+
+You can choose an OpenCode upstream by adding a prefix to the Worker URL:
+
+| Worker URL suffix | Upstream |
+|-------------------|----------|
+| no suffix | OpenCode Go |
+| `/go` | OpenCode Go |
+| `/zen` | OpenCode Zen |
+
+For example, use `YOUR_DEPLOYED_WORKER_URL/go` for Go models and `YOUR_DEPLOYED_WORKER_URL/zen` for Zen models.
 
 It also handles tool calls, streaming, and DeepSeek reasoning output so coding-agent workflows work correctly.
 
@@ -65,12 +75,14 @@ Configure the gateway like this:
 
 | Setting | Value |
 |---------|-------|
-| Base URL | Your deployed Worker URL |
+| Base URL | Your deployed Worker URL, or add `/go` or `/zen` |
 | Auth scheme | `x-api-key` |
 | API key | Your OpenCode Go API key |
 | Model | Add manually, for example `deepseek-v4-pro` |
 
 Do not include `/v1/messages` in the Claude base URL. Claude will call `/v1/messages`; the Worker handles that path.
+
+Use `/go` for OpenCode Go subscription models. Use `/zen` for OpenCode Zen models. Zen includes multiple endpoint styles; this proxy's Claude translation path is for Zen models available through the OpenAI-compatible `/chat/completions` endpoint.
 
 ### Manual Model Setup
 
@@ -110,7 +122,7 @@ You can also configure Claude with a `claude.json` gateway entry. Replace the Wo
 ```json
 {
   "inferenceProvider": "gateway",
-  "inferenceGatewayBaseUrl": "YOUR_DEPLOYED_WORKER_URL",
+  "inferenceGatewayBaseUrl": "YOUR_DEPLOYED_WORKER_URL/go",
   "inferenceGatewayApiKey": "YOUR_OPENCODE_GO_API_KEY",
   "inferenceGatewayAuthScheme": "x-api-key",
   "inferenceModels": [
@@ -176,7 +188,7 @@ Do not deploy this as a normal Node.js web app. `wrangler deploy` builds and pub
 
 ## Configuration
 
-The Worker is zero-config by default. It forwards to OpenCode Go using OpenAI-compatible format.
+The Worker is zero-config by default. It forwards to OpenCode Go using OpenAI-compatible format. You can also route to OpenCode Zen by adding `/zen` to the Worker URL.
 
 Optional request headers:
 
@@ -190,6 +202,13 @@ Optional request headers:
 | `anthropic-beta` | unset | Forwarded when calling Anthropic-compatible upstreams |
 
 The API key is validated locally before any upstream call. Missing or short keys receive a 401 response.
+
+Prefix routes:
+
+| Path prefix | Upstream base URL |
+|-------------|-------------------|
+| `/go` | `https://opencode.ai/zen/go/v1` |
+| `/zen` | `https://opencode.ai/zen/v1` |
 
 ## API Endpoints
 

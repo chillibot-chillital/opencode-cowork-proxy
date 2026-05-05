@@ -66,4 +66,82 @@ describe('worker routing', () => {
       }),
     }));
   });
+
+  it('routes /go-prefixed Anthropic requests to OpenCode Go', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const request = new Request('https://proxy.example/go/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': key },
+      body: JSON.stringify({ model: 'deepseek-v4-pro', messages: [{ role: 'user', content: 'hi' }] }),
+    });
+
+    await worker.fetch(request);
+
+    expect(fetchMock).toHaveBeenCalledWith('https://opencode.ai/zen/go/v1/chat/completions', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: `Bearer ${key}` }),
+    }));
+  });
+
+  it('routes /zen-prefixed Anthropic requests to OpenCode Zen', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const request = new Request('https://proxy.example/zen/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': key },
+      body: JSON.stringify({ model: 'qwen3.5-plus', messages: [{ role: 'user', content: 'hi' }] }),
+    });
+
+    await worker.fetch(request);
+
+    expect(fetchMock).toHaveBeenCalledWith('https://opencode.ai/zen/v1/chat/completions', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: `Bearer ${key}` }),
+    }));
+  });
+
+  it('routes /go-prefixed model discovery to OpenCode Go models', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('{"data":[]}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+
+    const request = new Request('https://proxy.example/go/v1/models', {
+      headers: { 'x-api-key': key },
+    });
+
+    await worker.fetch(request);
+
+    expect(fetchMock).toHaveBeenCalledWith('https://opencode.ai/zen/go/v1/models', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${key}` },
+    });
+  });
+
+  it('routes /zen-prefixed model discovery to OpenCode Zen models', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('{"data":[]}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+
+    const request = new Request('https://proxy.example/zen/v1/models', {
+      headers: { 'x-api-key': key },
+    });
+
+    await worker.fetch(request);
+
+    expect(fetchMock).toHaveBeenCalledWith('https://opencode.ai/zen/v1/models', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${key}` },
+    });
+  });
 });

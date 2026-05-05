@@ -14,5 +14,8 @@
     "wrangler": "^4.87.0"
   },
   "license": "MIT",
-  "description": "Bidirectional AI API translation gateway for Cloudflare Workers. Anthropic↔OpenAI format bridge."
+  "description": "Bidirectional AI API translation gateway for Cloudflare Workers. Anthropic↔OpenAI format bridge.",
+  "dependencies": {
+    "hono": "^4.12.17"
+  }
 }
