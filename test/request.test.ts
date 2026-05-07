@@ -189,7 +189,7 @@ describe('formatAnthropicToOpenAI (Anthropic → OpenAI request)', () => {
     ]);
   });
 
-  it('converts base64 images from Anthropic to OpenAI image_url format', () => {
+  it('strips images and keeps text when image is attached', () => {
     const result = formatAnthropicToOpenAI({
       model: 'claude-sonnet-4-20250514',
       messages: [{
@@ -202,14 +202,10 @@ describe('formatAnthropicToOpenAI (Anthropic → OpenAI request)', () => {
       max_tokens: 1024,
     });
     expect(result.messages[0].role).toBe('user');
-    expect(Array.isArray(result.messages[0].content)).toBe(true);
-    expect(result.messages[0].content).toEqual([
-      { type: 'text', text: 'What is in this image?' },
-      { type: 'image_url', image_url: { url: 'data:image/png;base64,abc123' } },
-    ]);
+    expect(result.messages[0].content).toBe('What is in this image?');
   });
 
-  it('converts URL images from Anthropic to OpenAI image_url format', () => {
+  it('inserts fallback text when message contains only an image', () => {
     const result = formatAnthropicToOpenAI({
       model: 'claude-sonnet-4-20250514',
       messages: [{
@@ -220,9 +216,7 @@ describe('formatAnthropicToOpenAI (Anthropic → OpenAI request)', () => {
       }],
       max_tokens: 1024,
     });
-    expect(result.messages[0].content).toEqual([
-      { type: 'image_url', image_url: { url: 'https://example.com/cat.jpg' } },
-    ]);
+    expect(result.messages[0].content).toBe('[An image was attached but this model does not support vision.]');
   });
 
   it('returns string content when user message has no images', () => {
@@ -239,7 +233,7 @@ describe('formatAnthropicToOpenAI (Anthropic → OpenAI request)', () => {
     expect(result.messages[0].content).toBe('Hello world');
   });
 
-  it('includes text alongside images in array content', () => {
+  it('strips image and keeps only text in message', () => {
     const result = formatAnthropicToOpenAI({
       model: 'claude-sonnet-4-20250514',
       messages: [{
@@ -251,10 +245,7 @@ describe('formatAnthropicToOpenAI (Anthropic → OpenAI request)', () => {
       }],
       max_tokens: 1024,
     });
-    expect(result.messages[0].content).toEqual([
-      { type: 'text', text: 'What is this?' },
-      { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,xyz' } },
-    ]);
+    expect(result.messages[0].content).toBe('What is this?');
   });
 });
 

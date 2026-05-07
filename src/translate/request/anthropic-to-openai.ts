@@ -1,17 +1,5 @@
 import { hashSystemPrompt } from '../../cache';
 
-function translateImageBlock(part: any): any {
-  const src = part.source;
-  if (!src) return null;
-  if (src.type === "url") {
-    return { type: "image_url", image_url: { url: src.url } };
-  }
-  if (src.type === "base64") {
-    return { type: "image_url", image_url: { url: `data:${src.media_type};base64,${src.data}` } };
-  }
-  return null;
-}
-
 export function formatAnthropicToOpenAI(body: any): any {
   const { model, messages, system, temperature, max_tokens, top_p, stop_sequences, tools, stream } = body;
 
@@ -54,15 +42,14 @@ export function formatAnthropicToOpenAI(body: any): any {
 
         if (msg.role === "user") {
           let userText = "";
-          const contentParts: any[] = [];
+          let hasImage = false;
           const toolResults: any[] = [];
 
           msg.content.forEach((part: any) => {
             if (part.type === "text") {
               userText += (typeof part.text === "string" ? part.text : JSON.stringify(part.text)) + "\n";
             } else if (part.type === "image") {
-              const translated = translateImageBlock(part);
-              if (translated) contentParts.push(translated);
+              hasImage = true;
             } else if (part.type === "tool_result") {
               toolResults.push({
                 role: "tool",
@@ -76,11 +63,9 @@ export function formatAnthropicToOpenAI(body: any): any {
 
           result.push(...toolResults);
 
-          if (contentParts.length > 0) {
-            if (trimmed) contentParts.unshift({ type: "text", text: trimmed });
-            result.push({ role: "user", content: contentParts });
-          } else if (trimmed) {
-            result.push({ role: "user", content: trimmed });
+          if (trimmed || hasImage) {
+            const text = trimmed || "[An image was attached but this model does not support vision.]";
+            result.push({ role: "user", content: text });
           }
         }
 
